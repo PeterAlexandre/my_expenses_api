@@ -7,6 +7,7 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.transaction import Transaction
+    from app.models.transaction_category import TransactionCategory
 
 
 class User(Base):
@@ -19,5 +20,9 @@ class User(Base):
 
     transactions: Mapped[list["Transaction"]] = relationship(
         "Transaction",
+        back_populates="user",
+    )
+    categories: Mapped[list["TransactionCategory"]] = relationship(
+        "TransactionCategory",
         back_populates="user",
     )
