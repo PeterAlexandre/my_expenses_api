@@ -33,7 +33,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     transaction_id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    type: Mapped[TransactionType] = mapped_column(
+    transaction_type: Mapped[TransactionType] = mapped_column(
         SAEnum(TransactionType), nullable=False
     )
     description: Mapped[str] = mapped_column(String(255), nullable=False)
