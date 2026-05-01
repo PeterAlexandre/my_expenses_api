@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 
-from app.routes import auth, transaction, user
+from app.routes import auth, category, transaction, user
 
 app = FastAPI()
 
 app.include_router(auth.router)
 app.include_router(user.router)
+app.include_router(category.router)
 app.include_router(transaction.router)
 
 
