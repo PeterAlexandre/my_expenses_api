@@ -12,7 +12,13 @@ from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
 def create_transaction(session: Session, user: User, data: TransactionCreate) -> Transaction:
-    transaction = Transaction(**data.model_dump(), user_id=user.id)
+    from app.services.category_service import match_category  # noqa: PLC0415
+
+    fields = data.model_dump()
+    if fields["category_id"] is None:
+        fields["category_id"] = match_category(session, user, data.description)
+
+    transaction = Transaction(**fields, user_id=user.id)
     session.add(transaction)
     session.commit()
     session.refresh(transaction)
