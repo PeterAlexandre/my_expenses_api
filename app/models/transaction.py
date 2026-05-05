@@ -54,6 +54,9 @@ class Transaction(Base):
         nullable=True,
     )
 
+    import_batch_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    import_batch_row: Mapped[int | None] = mapped_column(nullable=True)
+
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="transactions")

@@ -1,3 +1,9 @@
+import csv
+import hashlib
+import io
+from datetime import date
+from decimal import Decimal, InvalidOperation
+
 from sqlalchemy import extract
 from sqlalchemy.orm import Session
 
@@ -8,7 +14,7 @@ from app.models.transaction import (
     TransactionType,
 )
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionUpdate
+from app.schemas.transaction import CSVImportResult, TransactionCreate, TransactionUpdate
 
 
 def create_transaction(session: Session, user: User, data: TransactionCreate) -> Transaction:
@@ -72,3 +78,64 @@ def update_transaction(session: Session, transaction: Transaction, data: Transac
 def delete_transaction(session: Session, transaction: Transaction) -> None:
     session.delete(transaction)
     session.commit()
+
+
+def import_csv_transactions(
+    session: Session,
+    user: User,
+    content: bytes,
+    transaction_type: TransactionType,
+    status: TransactionStatus,
+    payment_method: PaymentMethod | None,
+) -> CSVImportResult:
+    from app.services.category_service import match_category  # noqa: PLC0415
+
+    batch_id = hashlib.sha256(content).hexdigest()
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
+
+    imported = 0
+    skipped = 0
+
+    for batch_row, row in enumerate(reader):
+        try:
+            transaction_date = date.fromisoformat(row["date"].strip())
+            description = row["title"].strip()
+            amount = Decimal(row["amount"].strip()).quantize(Decimal("0.01"))
+            if amount <= 0:
+                skipped += 1
+                continue
+        except (KeyError, ValueError, InvalidOperation):
+            skipped += 1
+            continue
+
+        duplicate = (
+            session.query(Transaction)
+            .filter(
+                Transaction.user_id == user.id,
+                Transaction.import_batch_id == batch_id,
+                Transaction.import_batch_row == batch_row,
+            )
+            .first()
+        )
+        if duplicate:
+            skipped += 1
+            continue
+
+        category_id = match_category(session, user, description)
+        transaction = Transaction(
+            user_id=user.id,
+            transaction_type=transaction_type,
+            description=description,
+            amount=amount,
+            transaction_date=transaction_date,
+            status=status,
+            payment_method=payment_method,
+            category_id=category_id,
+            import_batch_id=batch_id,
+            import_batch_row=batch_row,
+        )
+        session.add(transaction)
+        imported += 1
+
+    session.commit()
+    return CSVImportResult(imported=imported, skipped=skipped)

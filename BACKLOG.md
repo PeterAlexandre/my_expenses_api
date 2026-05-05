@@ -6,7 +6,6 @@
 Import credit card bills from bank-exported CSV files.
 - Parse CSV and bulk-create transactions
 - Auto-assign categories via pattern matching on import
-- Skip duplicates (same description + amount + date)
 - Return a summary: how many imported, how many skipped
 
 ---

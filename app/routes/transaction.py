@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.models.transaction import PaymentMethod, Transaction, TransactionStatus, TransactionType
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionRead, TransactionUpdate
+from app.schemas.transaction import CSVImportResult, TransactionCreate, TransactionRead, TransactionUpdate
 from app.security import get_current_user
 from app.services.transaction_service import (
     create_transaction,
     delete_transaction,
     get_transaction,
+    import_csv_transactions,
     list_transactions,
     update_transaction,
 )
@@ -26,6 +27,21 @@ def get_transaction_or_404(
     if not transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
     return transaction
+
+
+@router.post("/import/csv", response_model=CSVImportResult)
+async def import_csv(
+    file: UploadFile,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    transaction_type: TransactionType = Query(default=TransactionType.expense),
+    transaction_status: TransactionStatus = Query(default=TransactionStatus.done, alias="status"),
+    payment_method: PaymentMethod | None = Query(default=PaymentMethod.credit_card),
+):
+    if not file.filename or not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File must be a CSV.")
+    content = await file.read()
+    return import_csv_transactions(session, current_user, content, transaction_type, transaction_status, payment_method)
 
 
 @router.post("", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)

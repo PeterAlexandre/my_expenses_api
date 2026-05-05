@@ -29,9 +29,16 @@ class TransactionRead(BaseModel):
     is_recurring: bool
     creditcard: str | None
     category_id: int | None
+    import_batch_id: str | None
+    import_batch_row: int | None
     user_id: int
 
     model_config = {"from_attributes": True}
+
+
+class CSVImportResult(BaseModel):
+    imported: int
+    skipped: int
 
 
 class TransactionUpdate(BaseModel):
