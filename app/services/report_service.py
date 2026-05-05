@@ -42,16 +42,7 @@ def get_monthly_report(session: Session, user: User, year: int, month: int) -> M
         ZERO,
     )
 
-    done_income = sum(
-        (t.amount for t in income if t.status == TransactionStatus.done),
-        ZERO,
-    )
-    done_account_expenses = sum(
-        (t.amount for t in expenses
-         if t.status == TransactionStatus.done and t.payment_method == PaymentMethod.account),
-        ZERO,
-    )
-    current_balance = done_income - done_account_expenses
+    current_balance = _calculate_balance(session, user)
 
     by_category = _build_category_breakdown(expenses, expenses_total)
 
@@ -81,6 +72,35 @@ def get_monthly_report(session: Session, user: User, year: int, month: int) -> M
         by_category=by_category,
         provisions=provisions,
     )
+
+
+def _calculate_balance(session: Session, user: User) -> Decimal:
+    query = (
+        session.query(Transaction)
+        .filter(
+            Transaction.user_id == user.id,
+            Transaction.status == TransactionStatus.done,
+        )
+    )
+
+    if user.balance_snapshot_date is not None:
+        query = query.filter(Transaction.transaction_date > user.balance_snapshot_date)
+
+    all_done = query.all()
+
+    income_total = sum(
+        (t.amount for t in all_done if t.transaction_type == TransactionType.income),
+        ZERO,
+    )
+    account_expenses_total = sum(
+        (t.amount for t in all_done
+         if t.transaction_type == TransactionType.expense
+         and t.payment_method == PaymentMethod.account),
+        ZERO,
+    )
+
+    snapshot = user.balance_snapshot_amount or ZERO
+    return snapshot + income_total - account_expenses_total
 
 
 def _build_category_breakdown(
