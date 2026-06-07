@@ -63,6 +63,7 @@ def list_all(
     transaction_status: TransactionStatus | None = Query(default=None, alias="status"),
     payment_method: PaymentMethod | None = Query(default=None),
     category_id: int | None = Query(default=None),
+    description: str | None = Query(default=None),
 ):
     return list_transactions(
         session,
@@ -73,6 +74,7 @@ def list_all(
         transaction_status=transaction_status,
         payment_method=payment_method,
         category_id=category_id,
+        description=description,
     )
 
 

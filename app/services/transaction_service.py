@@ -48,6 +48,7 @@ def list_transactions(
     transaction_status: TransactionStatus | None = None,
     payment_method: PaymentMethod | None = None,
     category_id: int | None = None,
+    description: str | None = None,
 ) -> list[Transaction]:
     query = session.query(Transaction).filter(Transaction.user_id == user.id)
 
@@ -63,6 +64,8 @@ def list_transactions(
         query = query.filter(Transaction.payment_method == payment_method)
     if category_id is not None:
         query = query.filter(Transaction.category_id == category_id)
+    if description is not None:
+        query = query.filter(Transaction.description.ilike(f"%{description}%"))
 
     return query.order_by(Transaction.transaction_date.desc()).all()
 
