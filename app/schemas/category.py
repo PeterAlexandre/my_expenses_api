@@ -18,3 +18,13 @@ class CategoryRead(BaseModel):
 class CategoryUpdate(BaseModel):
     name: str | None = None
     pattern: str | None = None
+
+
+class CategoryBulkItem(BaseModel):
+    category_id: int | None = None
+    name: str
+    pattern: str | None = None
+
+
+class CategoryBulkRequest(BaseModel):
+    categories: list[CategoryBulkItem]

@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 from app.db import get_session
 from app.models.transaction_category import TransactionCategory
 from app.models.user import User
-from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
+from app.schemas.category import CategoryBulkRequest, CategoryCreate, CategoryRead, CategoryUpdate
 from app.security import get_current_user
 from app.services.category_service import (
+    bulk_update_categories,
     create_category,
     delete_category,
     get_category,
@@ -65,3 +66,15 @@ def delete(
     category: TransactionCategory = Depends(get_category_or_404),
 ):
     delete_category(session, category)
+
+
+@router.put("/bulk", response_model=list[CategoryRead])
+def bulk_update(
+    data: CategoryBulkRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return bulk_update_categories(session, current_user, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

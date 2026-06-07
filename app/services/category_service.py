@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.transaction_category import TransactionCategory
 from app.models.user import User
-from app.schemas.category import CategoryCreate, CategoryUpdate
+from app.schemas.category import CategoryBulkItem, CategoryBulkRequest, CategoryCreate, CategoryUpdate
 
 
 def create_category(session: Session, user: User, data: CategoryCreate) -> TransactionCategory:
@@ -44,6 +44,48 @@ def update_category(session: Session, category: TransactionCategory, data: Categ
 def delete_category(session: Session, category: TransactionCategory) -> None:
     session.delete(category)
     session.commit()
+
+
+def bulk_update_categories(
+    session: Session, user: User, data: CategoryBulkRequest
+) -> list[TransactionCategory]:
+    incoming_ids = {item.category_id for item in data.categories if item.category_id is not None}
+
+    existing = (
+        session.query(TransactionCategory)
+        .filter(TransactionCategory.user_id == user.id)
+        .all()
+    )
+    existing_by_id = {c.category_id: c for c in existing}
+
+    # Delete categories absent from payload
+    for category in existing:
+        if category.category_id not in incoming_ids:
+            session.delete(category)
+
+    result = []
+    for item in data.categories:
+        if item.category_id is not None:
+            category = existing_by_id.get(item.category_id)
+            if category is None:
+                raise ValueError(f"Category {item.category_id} not found or does not belong to user.")
+            category.name = item.name
+            category.pattern = item.pattern
+            result.append(category)
+        else:
+            new_category = TransactionCategory(
+                name=item.name,
+                pattern=item.pattern,
+                user_id=user.id,
+            )
+            session.add(new_category)
+            result.append(new_category)
+
+    session.commit()
+    for category in result:
+        session.refresh(category)
+
+    return sorted(result, key=lambda c: c.name)
 
 
 def match_category(session: Session, user: User, description: str) -> int | None:
