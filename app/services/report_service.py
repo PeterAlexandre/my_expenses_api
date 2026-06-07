@@ -107,19 +107,24 @@ def _build_category_breakdown(
     expenses: list[Transaction],
     expenses_total: Decimal,
 ) -> list[CategorySummary]:
-    totals: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    totals: dict[tuple[int | None, str], Decimal] = defaultdict(lambda: ZERO)
 
     for transaction in expenses:
-        name = transaction.category.name if transaction.category else "Uncategorized"
-        totals[name] += transaction.amount
+        key = (
+            (transaction.category.category_id, transaction.category.name)
+            if transaction.category
+            else (None, "Uncategorized")
+        )
+        totals[key] += transaction.amount
 
     return [
         CategorySummary(
+            category_id=category_id,
             name=name,
             total=total,
             percentage=round(float(total / expenses_total * 100), 2) if expenses_total else 0.0,
         )
-        for name, total in sorted(totals.items(), key=lambda item: item[1], reverse=True)
+        for (category_id, name), total in sorted(totals.items(), key=lambda item: item[1], reverse=True)
     ]
 
 

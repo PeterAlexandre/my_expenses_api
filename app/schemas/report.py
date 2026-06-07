@@ -16,6 +16,7 @@ class Summary(BaseModel):
 
 
 class CategorySummary(BaseModel):
+    category_id: int | None
     name: str
     total: Decimal
     percentage: float
